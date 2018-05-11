@@ -32,50 +32,37 @@ File.open("#{__dir__}/save_fav_imgs.json") do |f|
 end
 
 # API実行
-$TWITTER_TRY_COUNT = 2
 $USER_AGENT = 'save_fav_imgs'
-def twitter_execute(uri, limit = 10)
-	0.upto($TWITTER_TRY_COUNT) { |try_count|
-		begin
-			res = ""
-			Timeout.timeout(60) {
-				res = $ACCESS_TOKEN.get(uri, {'User-Agent' => "#{$USER_AGENT}"})
-			}
-			case res
-			when Net::HTTPSuccess then
-				if 0 < try_count then
-					Log.info("success")
-				end
-				return res.body
-			when Net::HTTPRedirection then
-				if 0 < limit then
-					req.path = res['location']
-					Log.info("redirect to #{req.path}")
-					return twitter_execute(req, limit - 1)
-				else
-					Log.warn("redirect over")
-					return nil
-				end
-			when Net::HTTPNotFound, Net::HTTPForbidden, Net::HTTPBadGateway then
-				Log.error("unretryable error. responce code #=> #{res.code} msg #=> #{res.message}")
-				Log.debug(res.body)
-				return nil
-			else
-				Log.warn("unknown responce code #=> #{res.code} msg #=> #{res.message}")
-				Log.debug(res.body)
-			end
-		rescue => e
-			if try_count < $TWITTER_TRY_COUNT
-				Log.warn(e)
-				Log.info('sleep 3 sec... and Retry to execute Twitter-Api !')
-				sleep(3)
-			else
-				Log.error(e)
-				Log.error("Retry over !!!")
-			end
+def twitter_execute(uri, limit = 5)
+	if limit < 0
+		Log.error("retry over !!!")
+		return nil
+	end
+	begin
+		res = ''
+		Timeout.timeout(60) {
+			res = $ACCESS_TOKEN.get(uri, {'User-Agent' => $USER_AGENT})
+		}
+		case res
+		when Net::HTTPSuccess then
+			return res.body
+		when Net::HTTPNotFound, Net::HTTPForbidden, Net::HTTPBadGateway then
+			Log.error("unretryable error. responce code #=> #{res.code} msg #=> #{res.message}")
+			Log.debug(res.body)
+			return nil
+		when Net::HTTPRedirection then
+			uri = res['location']
+			Log.info("redirect to #{uri}")
+		else
+			Log.warn("unknown responce code #=> #{res.code} msg #=> #{res.message}")
+			Log.debug(res.body)
 		end
-	}
-	return nil
+	rescue => e
+		Log.warn(e)
+	end
+	Log.info('sleep 2 sec and retry.')
+	sleep(2)
+	return twitter_execute(uri, limit - 1)
 end
 
 # ユーティリティ
@@ -93,7 +80,7 @@ def save_images(json, since_id, max_id = nil)
 	Log.warn("json #=> nil") if json == nil || json.empty?
 	json_obj = JSON.parse(json)
 	json_obj.map { |status|
-		# 古いツイートをスキップする
+		# IDチェック
 		id = status['id_str'];
 		break if comp_id(id, since_id) <= 0 && max_id.to_s.empty? == nil
 		last_id = id if comp_id(last_id, id) < 0
@@ -127,7 +114,7 @@ def save_images(json, since_id, max_id = nil)
 			file_path = "#{dir}/#{file_name}#{index_str}.#{ext}"
 			Log.info("file_path #=> #{file_path}")
 			next if File.exists?(file_path)
-			open("#{file_path}", 'wb') { |local_file|
+			open(file_path, 'wb') { |local_file|
 				open(url) { |remote_file|
 					local_file.write(remote_file.read)
 				}
@@ -153,7 +140,7 @@ opts.on('-s VALUE', '--sleep VALUE', Integer, 'sleep seconds') { |s|
 }
 opts.parse!(ARGV)
 if roop_count == 1
-	open("#{$LAST_ID_FILE}", 'r') { |f|
+	open($LAST_ID_FILE, 'r') { |f|
 		last_id = f.read
 	}
 end
