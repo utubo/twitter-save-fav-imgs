@@ -29,11 +29,11 @@ File.open("#{__dir__}/save_fav_imgs.json") do |f|
 		ini['oauth']['access_token'],
 		ini['oauth']['access_token_secret']
 	)
-	$USER_AGENT = 'save_fav_imgs'
 end
 
-$TWITTER_TRY_COUNT = 2
 # API実行
+$TWITTER_TRY_COUNT = 2
+$USER_AGENT = 'save_fav_imgs'
 def twitter_execute(uri, limit = 10)
 	0.upto($TWITTER_TRY_COUNT) { |try_count|
 		begin
@@ -78,13 +78,15 @@ def twitter_execute(uri, limit = 10)
 	return nil
 end
 
-def comp_str(a, b)
+# ユーティリティ
+def comp_id(a, b)
 	return 0 if a == b
 	return -1 if a == nil
 	return 1 if b == nil
 	return (a.size < b.size || a < b) ? -1 : 1
 end
 
+# 保存メイン
 def save_images(json, since_id, max_id = nil)
 	last_id = since_id
 	first_id = max_id
@@ -93,16 +95,16 @@ def save_images(json, since_id, max_id = nil)
 	json_obj.map { |status|
 		# 古いツイートをスキップする
 		id = status['id_str'];
-		break if comp_str(id, since_id) <= 0 && max_id.to_s.empty? == nil
-		last_id = id if comp_str(last_id, id) < 0
-		first_id = id if comp_str(id, first_id) < 0 || first_id.to_s.empty?
+		break if comp_id(id, since_id) <= 0 && max_id.to_s.empty? == nil
+		last_id = id if comp_id(last_id, id) < 0
+		first_id = id if comp_id(id, first_id) < 0 || first_id.to_s.empty?
 		# ツイートの情報を取得する
 		Log.debug(id);
 		entities = status['extended_entities']
 		next if entities == nil
 		media = entities['media']
 		next if media == nil
-		# ツイートの情報からディレクトリ名とファイルパスを作成する
+		# ツイートの情報からディレクトリ名とファイル名を作成する
 		screen_name = status['user']['screen_name']
 		created_at = Time::parse(status['created_at']).localtime.strftime('%Y%m%d_%H%M%S')
 		text = status['text'].strip
@@ -158,14 +160,14 @@ end
 for i in 1..roop_count do
 	sleep(sleep_sec) if i != 1
 	url = $FAV_URL
-	url << '&since_id='+ last_id.to_s if !last_id.to_s.empty? && roop_count == 1
-	url << '&max_id='+ max_id.to_s if !max_id.to_s.empty? && roop_count != 1
+	url << "&since_id=#{last_id}" if !last_id.to_s.empty? && roop_count == 1
+	url << "&max_id=#{max_id}" if !max_id.to_s.empty? && roop_count != 1
 	Log.info("execute-api #{url}");
 	res = twitter_execute(url);
 	last_id, max_id = save_images(res, last_id, max_id);
 end
 if roop_count == 1
-	open("#{$LAST_ID_FILE}", 'w') { |f|
+	open($LAST_ID_FILE, 'w') { |f|
 		f.write(last_id)
 	}
 end
