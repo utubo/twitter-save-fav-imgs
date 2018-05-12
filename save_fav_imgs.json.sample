@@ -1,7 +1,7 @@
 {
   "log_file": "/var/log/save_fav_imgs.log",
   "apl_data_file": "/var/save_fav_imgs/last_id.dat",
-  "save_dir": "/var/save_fav_imgs"
+  "save_dir": "/var/save_fav_imgs",
   "oauth": {
     "consumer_key": "xxxxxxxxxxxxxxxxxxxxxx",
     "consumer_key_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
