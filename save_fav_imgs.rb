@@ -33,36 +33,35 @@ end
 
 # API実行
 $USER_AGENT = 'save_fav_imgs'
-def twitter_execute(uri, limit = 5)
-	if limit < 0
-		Log.error("retry over !!!")
-		return nil
-	end
-	begin
-		res = ''
-		Timeout.timeout(60) {
-			res = $ACCESS_TOKEN.get(uri, {'User-Agent' => $USER_AGENT})
-		}
-		case res
-		when Net::HTTPSuccess then
-			return res.body
-		when Net::HTTPNotFound, Net::HTTPForbidden, Net::HTTPBadGateway then
-			Log.error("unretryable error. responce code #=> #{res.code} msg #=> #{res.message}")
-			Log.debug(res.body)
-			return nil
-		when Net::HTTPRedirection then
-			uri = res['location']
-			Log.info("redirect to #{uri}")
-		else
-			Log.warn("unknown responce code #=> #{res.code} msg #=> #{res.message}")
-			Log.debug(res.body)
+def twitter_execute(uri)
+	5.times {
+		begin
+			res = ''
+			Timeout.timeout(60) {
+				res = $ACCESS_TOKEN.get(uri, {'User-Agent' => $USER_AGENT})
+			}
+			case res
+			when Net::HTTPSuccess then
+				return res.body
+			when Net::HTTPNotFound, Net::HTTPForbidden, Net::HTTPBadGateway then
+				Log.error("unretryable error. responce code #=> #{res.code} msg #=> #{res.message}")
+				Log.debug(res.body)
+				return nil
+			when Net::HTTPRedirection then
+				uri = res['location']
+				Log.info("redirect to #{uri}")
+			else
+				Log.warn("unknown responce code #=> #{res.code} msg #=> #{res.message}")
+				Log.debug(res.body)
+			end
+		rescue => e
+			Log.warn(e)
 		end
-	rescue => e
-		Log.warn(e)
-	end
-	Log.info('sleep 2 sec and retry.')
-	sleep(2)
-	return twitter_execute(uri, limit - 1)
+		Log.info('sleep 2 sec and retry.')
+		sleep(2)
+	}
+	Log.error("retry over !!!")
+	return nil
 end
 
 # ユーティリティ
