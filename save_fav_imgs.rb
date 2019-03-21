@@ -20,7 +20,7 @@ File.open("#{__dir__}/save_fav_imgs.json") do |f|
 	$LAST_ID_FILE = ini['apl_data_file']
 	$FAV_URL = "https://api.twitter.com/1.1/favorites/list.json?count=200&screen_name=#{ini['screen_name']}&tweet_mode=extended";
 	$GET_STATUS= "https://api.twitter.com/1.1/statuses/lookup.json?include_entities=true&include_ext_alt_text=true&tweet_mode=extended";
-	$GET_FROM_SCREENNAME_AND_IDi = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_ext_alt_text=true&count=1&tweet_mode=extended";
+	$GET_FROM_SCREENNAME_AND_ID = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_ext_alt_text=true&count=1&tweet_mode=extended";
 	$SAVE_DIR = ini['save_dir']
 	$ACCESS_TOKEN = OAuth::AccessToken.new(
 		OAuth::Consumer.new(
