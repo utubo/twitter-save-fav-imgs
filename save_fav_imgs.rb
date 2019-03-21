@@ -18,7 +18,9 @@ File.open("#{__dir__}/save_fav_imgs.json") do |f|
 	Log = Logger.new(ini['log_file'], 3)
 	Log.info('--開始--------------------')
 	$LAST_ID_FILE = ini['apl_data_file']
-	$FAV_URL = "https://api.twitter.com/1.1/favorites/list.json?count=200&screen_name=#{ini['screen_name']}";
+	$FAV_URL = "https://api.twitter.com/1.1/favorites/list.json?count=200&screen_name=#{ini['screen_name']}&tweet_mode=extended";
+	$GET_STATUS= "https://api.twitter.com/1.1/statuses/lookup.json?include_entities=true&include_ext_alt_text=true&tweet_mode=extended";
+	$GET_FROM_SCREENNAME_AND_IDi = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_ext_alt_text=true&count=1&tweet_mode=extended";
 	$SAVE_DIR = ini['save_dir']
 	$ACCESS_TOKEN = OAuth::AccessToken.new(
 		OAuth::Consumer.new(
@@ -73,7 +75,7 @@ def comp_id(a, b)
 end
 
 # 保存メイン
-def save_images(json, since_id, max_id = nil)
+def save_images(json, since_id = '', max_id = nil)
 	last_id = since_id
 	first_id = max_id
 	Log.warn("json #=> nil") if json == nil || json.empty?
@@ -93,7 +95,7 @@ def save_images(json, since_id, max_id = nil)
 		# ツイートの情報からディレクトリ名とファイル名を作成する
 		screen_name = status['user']['screen_name']
 		created_at = Time::parse(status['created_at']).localtime.strftime('%Y%m%d_%H%M%S')
-		text = status['text'].strip
+		text = (status['text'] || status['full_text']).strip
 		escaped_text = text.gsub(/http.+/, '').gsub(/[\\\/:*?"<>|()]|\s/, '_').sub(/_+$/, '')
 		dir = "#{$SAVE_DIR}/@#{screen_name}"
 		file_name = "#{created_at}_#{escaped_text}"
@@ -130,6 +132,7 @@ opts = OptionParser.new
 last_id = ''
 max_id = nil
 roop_count = 1
+target_id = nil
 opts.on('-r VALUE', '--roop VALUE', Integer, 'roop count') { |r|
 	roop_count = r
 }
@@ -137,25 +140,45 @@ sleep_sec = 1
 opts.on('-s VALUE', '--sleep VALUE', Integer, 'sleep seconds') { |s|
 	sleep_sec = s
 }
+opts.on('-i VALUE', '--id VALUE', Integer, 'id') { |v|
+	target_id = v
+}
 opts.parse!(ARGV)
 if roop_count == 1
 	open($LAST_ID_FILE, 'r') { |f|
 		last_id = f.read
 	}
 end
-for i in 1..roop_count do
-	sleep(sleep_sec) if i != 1
-	url = $FAV_URL
-	url << "&since_id=#{last_id}" if !last_id.to_s.empty? && roop_count == 1
-	url << "&max_id=#{max_id}" if !max_id.to_s.empty? && roop_count != 1
+if ARGV[0] && m = ARGV[0].match(/https:\/\/twitter.com\/([^\/]+)\/status\/(\d+)/) then
+	url = $GET_FROM_SCREENNAME_AND_ID
+	url << "&screen_name=#{m[1]}"
+	url << "&max_id=#{m[2]}"
 	Log.info("execute-api #{url}");
 	res = twitter_execute(url);
-	last_id, max_id = save_images(res, last_id, max_id);
-end
-if roop_count == 1
-	open($LAST_ID_FILE, 'w') { |f|
-		f.write(last_id)
-	}
+	p res
+	save_images(res);
+elsif target_id
+	url = $GET_STATUS
+	url << "&id=#{target_id}"
+	Log.info("execute-api #{url}");
+	res = twitter_execute(url);
+	p res
+	save_images(res);
+else
+	for i in 1..roop_count do
+		sleep(sleep_sec) if i != 1
+		url = $FAV_URL
+		url << "&since_id=#{last_id}" if !last_id.to_s.empty? && roop_count == 1
+		url << "&max_id=#{max_id}" if !max_id.to_s.empty? && roop_count != 1
+		Log.info("execute-api #{url}");
+		res = twitter_execute(url);
+		last_id, max_id = save_images(res, last_id, max_id);
+	end
+	if roop_count == 1
+		open($LAST_ID_FILE, 'w') { |f|
+			f.write(last_id)
+		}
+	end
 end
 Log.info("last_id #{last_id}")
 Log.info('--終了--------------------')
