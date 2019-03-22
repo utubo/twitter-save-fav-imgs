@@ -16,11 +16,10 @@ Net::HTTP.version_1_2
 File.open("#{__dir__}/save_fav_imgs.json") do |f|
 	ini = JSON.load(f)
 	Log = Logger.new(ini['log_file'], 3)
-	Log.info('--開始--------------------')
+	Log.info('--Start-------------------')
 	$LAST_ID_FILE = ini['apl_data_file']
 	$FAV_URL = "https://api.twitter.com/1.1/favorites/list.json?count=200&screen_name=#{ini['screen_name']}&tweet_mode=extended";
 	$GET_STATUS= "https://api.twitter.com/1.1/statuses/lookup.json?include_entities=true&include_ext_alt_text=true&tweet_mode=extended";
-	$GET_FROM_SCREENNAME_AND_ID = "https://api.twitter.com/1.1/statuses/user_timeline.json?include_entities=true&include_ext_alt_text=true&count=1&tweet_mode=extended";
 	$SAVE_DIR = ini['save_dir']
 	$ACCESS_TOKEN = OAuth::AccessToken.new(
 		OAuth::Consumer.new(
@@ -36,6 +35,7 @@ end
 # API実行
 $USER_AGENT = 'save_fav_imgs'
 def twitter_execute(uri)
+	Log.debug("execute-api #{uri}");
 	5.times {
 		begin
 			res = ''
@@ -87,7 +87,7 @@ def save_images(json, since_id = '', max_id = nil)
 		last_id = id if comp_id(last_id, id) < 0
 		first_id = id if comp_id(id, first_id) < 0 || first_id.to_s.empty?
 		# ツイートの情報を取得する
-		Log.debug(id);
+		Log.debug("id => #{id}");
 		entities = status['extended_entities']
 		next if entities == nil
 		media = entities['media']
@@ -140,37 +140,30 @@ sleep_sec = 1
 opts.on('-s VALUE', '--sleep VALUE', Integer, 'sleep seconds') { |s|
 	sleep_sec = s
 }
-opts.on('-i VALUE', '--id VALUE', Integer, 'id') { |v|
-	target_id = v
+opts.on('-i VALUE', '--id VALUE', Integer, 'id') { |i|
+	target_id = i
 }
 opts.parse!(ARGV)
+if ARGV[0] && m = ARGV[0].match(/https:\/\/twitter.com\/[^\/]+\/status\/(\d+)/) then
+	target_id = m[1]
+end
 if roop_count == 1
 	open($LAST_ID_FILE, 'r') { |f|
 		last_id = f.read
 	}
 end
-if ARGV[0] && m = ARGV[0].match(/https:\/\/twitter.com\/([^\/]+)\/status\/(\d+)/) then
-	url = $GET_FROM_SCREENNAME_AND_ID
-	url << "&screen_name=#{m[1]}"
-	url << "&max_id=#{m[2]}"
-	Log.info("execute-api #{url}");
-	res = twitter_execute(url);
-	p res
-	save_images(res);
-elsif target_id
+if target_id
 	url = $GET_STATUS
 	url << "&id=#{target_id}"
-	Log.info("execute-api #{url}");
-	res = twitter_execute(url);
-	p res
-	save_images(res);
+	res = twitter_execute(url)
+	#Log.debug(res)
+	save_images(res)
 else
 	for i in 1..roop_count do
 		sleep(sleep_sec) if i != 1
 		url = $FAV_URL
 		url << "&since_id=#{last_id}" if !last_id.to_s.empty? && roop_count == 1
 		url << "&max_id=#{max_id}" if !max_id.to_s.empty? && roop_count != 1
-		Log.info("execute-api #{url}");
 		res = twitter_execute(url);
 		last_id, max_id = save_images(res, last_id, max_id);
 	end
@@ -178,8 +171,8 @@ else
 		open($LAST_ID_FILE, 'w') { |f|
 			f.write(last_id)
 		}
+		Log.info("last_id #{last_id}")
 	end
 end
-Log.info("last_id #{last_id}")
-Log.info('--終了--------------------')
+Log.info('--End---------------------')
 
