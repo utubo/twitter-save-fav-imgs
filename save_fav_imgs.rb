@@ -140,7 +140,7 @@ sleep_sec = 1
 opts.on('-s VALUE', '--sleep VALUE', Integer, 'sleep seconds') { |s|
 	sleep_sec = s
 }
-opts.on('-i VALUE', '--id VALUE', Integer, 'id') { |i|
+opts.on('-i VALUE', '--id VALUE', String, 'id') { |i|
 	target_id = i
 }
 opts.parse!(ARGV)
