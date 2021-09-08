@@ -116,7 +116,7 @@ def save_images(json, since_id = '', max_id = nil)
 			Log.info("file_path #=> #{file_path}")
 			next if File.exists?(file_path)
 			open(file_path, 'wb') { |local_file|
-				open(url) { |remote_file|
+					URI.open(url) { |remote_file|
 					local_file.write(remote_file.read)
 				}
 			}
