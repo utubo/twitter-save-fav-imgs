@@ -8,6 +8,7 @@
     "access_token": "99999999-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "access_token_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   },
-  "screen_name": "xxxxxx"
+  "screen_name": "xxxxxx",
+  "m3u8_download_command": "ffmpeg -loglevel fatal -y -i $url $file_path"
 }
 
