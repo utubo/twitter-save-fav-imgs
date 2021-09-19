@@ -21,6 +21,7 @@ File.open("#{__dir__}/save_fav_imgs.json") do |f|
 	$FAV_URL = "https://api.twitter.com/1.1/favorites/list.json?count=200&screen_name=#{ini['screen_name']}&tweet_mode=extended";
 	$GET_STATUS= "https://api.twitter.com/1.1/statuses/lookup.json?include_entities=true&include_ext_alt_text=true&tweet_mode=extended";
 	$SAVE_DIR = ini['save_dir']
+	$M3U8_DOWNLOAD_COMMAND = ini['m3u8_download_command'] || ''
 	$ACCESS_TOKEN = OAuth::AccessToken.new(
 		OAuth::Consumer.new(
 			ini['oauth']['consumer_key'],
@@ -115,11 +116,17 @@ def save_images(json, since_id = '', max_id = nil)
 			file_path = "#{dir}/#{file_name}#{index_str}.#{ext}"
 			Log.info("file_path #=> #{file_path}")
 			next if File.exists?(file_path)
-			open(file_path, 'wb') { |local_file|
-					URI.open(url) { |remote_file|
-					local_file.write(remote_file.read)
+			if ext == 'm3u8'
+				cmd = $M3U8_DOWNLOAD_COMMAND.sub('$url', url).sub('$file_path', file_path.sub(/m3u8$/, 'mp4'))
+				Log.debug(cmd)
+				system(cmd)
+			else
+				open(file_path, 'wb') { |local_file|
+						URI.open(url) { |remote_file|
+						local_file.write(remote_file.read)
+					}
 				}
-			}
+			end
 		}
 	}
 	return last_id, first_id
