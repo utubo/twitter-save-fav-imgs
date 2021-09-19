@@ -113,11 +113,11 @@ def save_images(json, since_id = '', max_id = nil)
 			url = video_info == nil ? m['media_url'] : video_info['variants'][0]['url'] # 画像のURL or 動画のURL
 			ext = url.sub(/.+\//, '').sub(/.+\./, '').sub(/[\?#;].*/, '')
 			index_str = has_other_medias ? "_#{index}" : ''
-			file_path = "#{dir}/#{file_name}#{index_str}.#{ext}"
+			file_path = "#{dir}/#{file_name}#{index_str}.#{ext == 'm3u8' ? 'mp4' : ext}"
 			Log.info("file_path #=> #{file_path}")
 			next if File.exists?(file_path)
 			if ext == 'm3u8'
-				cmd = $M3U8_DOWNLOAD_COMMAND.sub('$url', url).sub('$file_path', file_path.sub(/m3u8$/, 'mp4'))
+				cmd = $M3U8_DOWNLOAD_COMMAND.sub('$url', url).sub('$file_path', file_path)
 				Log.debug(cmd)
 				system(cmd)
 			else
